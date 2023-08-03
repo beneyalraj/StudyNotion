@@ -58,52 +58,50 @@ exports.resetPassword = async (req, res) => {
     //get the values
     const { password, confirmPassword, token } = req.body;
     //validate
-    if(password !== confirmPassword){
-        return res.json({
-            success:false,
-            message:"password is not matching",
-        });
+    if (password !== confirmPassword) {
+      return res.json({
+        success: false,
+        message: "password is not matching",
+      });
     }
     //get user details from db
-    const userDetails = await User.findOne({token:token});
+    const userDetails = await User.findOne({ token: token });
 
     //if no entry ie invalid token
-    if(!userDetails){
-        return res.json({
-            success:false,
-            message:"invalid token"
-        });
+    if (!userDetails) {
+      return res.json({
+        success: false,
+        message: "invalid token",
+      });
     }
 
     //token time check
-    if(userDetails.resetPasswordExperies < Date.now()){
-        return res.json({
-            success:false,
-            message:"Token has expired, generate a new one"
-        });
+    if (userDetails.resetPasswordExperies < Date.now()) {
+      return res.json({
+        success: false,
+        message: "Token has expired, generate a new one",
+      });
     }
 
     //hash the password
-    const hashedPassword = await bcrypt.hash(password,10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     //update the response
     await user.findOneAndUpdate(
-        {token:token},
-        {password:hashedPassword},
-        {new:true},
-    )
+      { token: token },
+      { password: hashedPassword },
+      { new: true }
+    );
 
     return res.status(200).json({
-        success:true,
-        message:"password reset successful",
-    })
-
+      success: true,
+      message: "password reset successful",
+    });
   } catch (error) {
-    console.log(error)
+    console.log(error);
     return res.status(500).json({
-        success:false,
-        message:"something went wrong while sending password reset email"
-    })
+      success: false,
+      message: "something went wrong while sending password reset email",
+    });
   }
 };
-
