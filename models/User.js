@@ -20,11 +20,11 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  token:{
-    type:String,
+  token: {
+    type: String,
   },
-  resetPasswordExpires:{
-    type:Date,
+  resetPasswordExpires: {
+    type: Date,
   },
   accountType: {
     type: String,
