@@ -1,107 +1,89 @@
 const User = require("../models/User");
-const mailsender = require("../utils/MailSender");
+const mailSender = require("../utils/mailSender");
 const bcrypt = require("bcrypt");
 
 exports.resetPasswordToken = async (req, res) => {
   try {
-    //get email from body
     const email = req.body.email;
-
-    //check user exist and do validation
     const user = await User.findOne({ email: email });
     if (!user) {
-      return res.status(400).json({
+      return res.json({
         success: false,
-        message: "You are not registered with us, please signup",
+        message: `This Email: ${email} is not Registered With Us Enter a Valid Email `,
       });
     }
-    //generate token
-    const token = crypto.randomUUID();
+    const token = crypto.randomBytes(20).toString("hex");
 
-    //update user by adding token and expiry time
-    const updatedUser = await user.findOneAndUpdate(
+    const updatedDetails = await User.findOneAndUpdate(
       { email: email },
       {
         token: token,
-        resetPasswordExperies: Date.now() + 5 * 60 * 1000,
+        resetPasswordExpires: Date.now() + 3600000,
       },
       { new: true }
     );
+    console.log("DETAILS", updatedDetails);
 
-    //create url
-    const url = `http:localhost:3000/update-password/${token}`;
+    const url = `http://localhost:3000/update-password/${token}`;
 
-    //send email
-    await mailsender(
+    await mailSender(
       email,
-      "Resert Password Link",
-      `Reset Password Link @{url}`
+      "Password Reset",
+      `Your Link for email verification is ${url}. Please click this url to reset your password.`
     );
 
-    //return respose
-    return res.status(200).json({
+    res.json({
       success: true,
-      message: "Email sent successfully please check email and change password",
+      message:
+        "Email Sent Successfully, Please Check Your Email to Continue Further",
     });
   } catch (error) {
-    console.log(error);
-    return res.status(500).json({
+    return res.json({
+      error: error.message,
       success: false,
-      message: "Something went wrong while resetting password",
+      message: `Some Error in Sending the Reset Message`,
     });
   }
 };
 
-//resetPassword
 exports.resetPassword = async (req, res) => {
   try {
-    //get the values
     const { password, confirmPassword, token } = req.body;
-    //validate
-    if (password !== confirmPassword) {
+
+    if (confirmPassword !== password) {
       return res.json({
         success: false,
-        message: "password is not matching",
+        message: "Password and Confirm Password Does not Match",
       });
     }
-    //get user details from db
     const userDetails = await User.findOne({ token: token });
-
-    //if no entry ie invalid token
     if (!userDetails) {
       return res.json({
         success: false,
-        message: "invalid token",
+        message: "Token is Invalid",
       });
     }
-
-    //token time check
-    if (userDetails.resetPasswordExperies < Date.now()) {
-      return res.json({
+    if (!(userDetails.resetPasswordExpires > Date.now())) {
+      return res.status(403).json({
         success: false,
-        message: "Token has expired, generate a new one",
+        message: `Token is Expired, Please Regenerate Your Token`,
       });
     }
-
-    //hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    //update the response
-    await user.findOneAndUpdate(
+    const encryptedPassword = await bcrypt.hash(password, 10);
+    await User.findOneAndUpdate(
       { token: token },
-      { password: hashedPassword },
+      { password: encryptedPassword },
       { new: true }
     );
-
-    return res.status(200).json({
+    res.json({
       success: true,
-      message: "password reset successful",
+      message: `Password Reset Successful`,
     });
   } catch (error) {
-    console.log(error);
-    return res.status(500).json({
+    return res.json({
+      error: error.message,
       success: false,
-      message: "something went wrong while sending password reset email",
+      message: `Some Error in Updating the Password`,
     });
   }
 };

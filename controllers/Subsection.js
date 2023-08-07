@@ -1,117 +1,56 @@
-const SubSection = require("../models/SubSection");
+// Import necessary modules
 const Section = require("../models/Section");
-const { uploadImageToCloudinary } = require("../utils/ImageUploader");
+const SubSection = require("../models/Subsection");
+const { uploadImageToCloudinary } = require("../utils/imageUploader");
 
+// Create a new sub-section for a given section
 exports.createSubSection = async (req, res) => {
   try {
-    //fetch data from req body
+    // Extract necessary information from the request body
     const { sectionId, title, timeDuration, description } = req.body;
-    //extract video files
     const video = req.files.videoFile;
-    //validate
+
+    // Check if all necessary fields are provided
     if (!sectionId || !title || !timeDuration || !description || !video) {
-      return res.status(400).json({
-        success: false,
-        message: "all fields are required",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "All Fields are Required" });
     }
-    //upload video to cloudinary
+
+    // Upload the video file to Cloudinary
     const uploadDetails = await uploadImageToCloudinary(
       video,
       process.env.FOLDER_NAME
     );
-    //create the sub section
-    const subSectionDetails = await SubSection.create(SubSection, {
+
+    // Create a new sub-section with the necessary information
+    const SubSectionDetails = await SubSection.create({
       title: title,
       timeDuration: timeDuration,
       description: description,
-      videoURL: uploadDetails.secure_url,
+      videoUrl: uploadDetails.secure_url,
     });
-    //update the section
-    const updatedDetails = await Section.findByIdAndUpdate(
+
+    // Update the corresponding section with the newly created sub-section
+    const updatedSection = await Section.findByIdAndUpdate(
       { _id: sectionId },
-      {
-        $push: {
-          subsection: subSectionDetails._id,
-        },
-      },
+      { $push: { subSection: SubSectionDetails._id } },
       { new: true }
-    );
-    //return response
-    return res.status(200).json({
-      success: true,
-      message: "subsection created successfully",
-      updatedDetails,
-    });
+    ).populate("subSection");
+
+    // Return the updated section in the response
+    return res.status(200).json({ success: true, data: updatedSection });
   } catch (error) {
+    // Handle any errors that may occur during the process
+    console.error("Error creating new sub-section:", error);
     return res.status(500).json({
       success: false,
-      message: "Something went wrong while creating a subsection",
+      message: "Internal server error",
       error: error.message,
     });
   }
 };
 
-exports.updateSubSection = async (req, res) => {
-  try {
-    //fetch data
-    const { subSectionName, subSectionId } = req.body;
+//HW: updateSubSection
 
-    //validate the data
-    if (!subSectionId || !subSectionName) {
-      return res.status(400).json({
-        success: false,
-        message: "fields cannot be empty",
-      });
-    }
-    //update the data
-    const subSection = await SubSection.findByIdAndUpdate(
-      subSectionId,
-      { subSectionName },
-      { new: true }
-    );
-
-    //return respose
-
-    return res.status(200).json({
-      success: true,
-      message: "Section updated successfully",
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "cannot update the section",
-      error: error.message,
-    });
-  }
-};
-
-exports.deleteSubSection = async (req, res) => {
-  try {
-    //fetch the data
-    const { subSectionId } = req.body;
-
-    //validate
-    if (!subSectionId) {
-      return res.status(400).json({
-        success: false,
-        message: "fields cannot be empty",
-      });
-    }
-
-    //find and delete the id
-    await SubSection.findByIdAndDelete(subSectionId);
-
-    //delete the data
-    return res.status(200).json({
-      success: true,
-      message: "Section deleted successfully",
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Somethings went wrong while trying to delete the section",
-      error: error.message,
-    });
-  }
-};
+//HW:deleteSubSection
